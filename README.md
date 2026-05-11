@@ -1,61 +1,61 @@
 # CodeMap
 
-> Multi-language codebase indexer — structure, dependencies, impact analysis.
+> Indexador de codebases multi-linguagem — estrutura, dependências, análise de impacto.
 
-## What
+## O que é
 
-CodeMap scans source code repositories and builds a queryable index of files, dependencies, classes, and impact chains. Think "AST + dependency graph + grep" combined into one tool.
+CodeMap escaneia repositórios de código-fonte e constrói um índice consultável de arquivos, dependências, classes e cadeias de impacto. Pense em "AST + grafo de dependências + grep" combinados em uma ferramenta só.
 
-## Why
+## Por quê
 
-Legacy codebases are hard to navigate. Onboarding takes weeks. Refactoring breaks things nobody knew were connected. CodeMap exists to make codebases **self-describing**.
+Codebases legados são difíceis de navegar. Onboarding leva semanas. Refactoring quebra coisas que ninguém sabia que estavam conectadas. CodeMap existe para tornar codebases **auto-descritivos**.
 
-## Architecture
+## Arquitetura
 
 ```
 ┌─────────────────────────────────────────┐
-│           QUERY LAYER                   │  CLI / MCP — ask questions
+│           QUERY LAYER                   │  CLI / MCP — faz perguntas
 ├─────────────────────────────────────────┤
-│           INDEX LAYER                   │  Store what was discovered
+│           INDEX LAYER                   │  Armazena o que foi descoberto
 ├─────────────────────────────────────────┤
-│           SCAN LAYER                    │  Discover the codebase
+│           SCAN LAYER                    │  Descobre o codebase
 └─────────────────────────────────────────┘
 ```
 
 ## Roadmap
 
-| Step | What | Status |
-|------|------|--------|
-| 1 | Dirmap — file structure, types | Planned |
-| 2 | Metrics — LOC, orphans, duplicates | Planned |
-| 3 | `uses` extraction — dependency map | Planned |
-| 4 | AST parsing — classes, methods, inheritance | Planned |
-| 5 | Impact graph — "what breaks if I change X?" | Planned |
+| Passo | O quê | Status |
+|-------|-------|--------|
+| 1 | Dirmap — estrutura de arquivos, tipos | Planejado |
+| 2 | Métricas — LOC, órfãos, duplicatas | Planejado |
+| 3 | Extração de `uses` — mapa de dependências | Planejado |
+| 4 | Parser AST — classes, métodos, herança | Planejado |
+| 5 | Grafo de impacto — "o que quebra se eu mudar X?" | Planejado |
 
-## Supported Languages
+## Linguagens Suportadas
 
-Planned (priority order):
+Planejado (ordem de prioridade):
 - Python
 - Delphi
 - Java
 - Kotlin
 - Flutter/Dart
 
-## Integration
+## Integração
 
 - **CLI** — `codemap scan <path>`, `codemap query "..."`
-- **MCP** — `codemap/scan`, `codemap/query` (Claude Code, AI agents)
+- **MCP** — `codemap/scan`, `codemap/query` (Claude Code, agentes de IA)
 
-## Alias Convention
+## Convenção de Alias
 
-Each indexed repository gets an alias: `[Repo]Atlas`
+Cada repositório indexado recebe um alias: `[Repo]Atlas`
 
-Examples: HadstecaAtlas, DelphiAtlas, FuturaAtlas
+Exemplos: HadstecaAtlas, DelphiAtlas, FuturaAtlas
 
-## Author
+## Autor
 
-Built by [.dobrador](https://github.com/h4mn)
+Desenvolvido por [.dobrador](https://github.com/h4mn)
 
 ---
 
-[Português](README-pt_BR.md)
+[English](README-en.md)
