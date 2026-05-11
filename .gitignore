@@ -6,3 +6,7 @@ build/
 .venv/
 .env
 *.index.json
+.claude/
+.mcp.json
+.sky/
+.vscode/
