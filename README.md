@@ -43,7 +43,7 @@ Planned (priority order):
 
 ## Integration
 
-- **CLI** — `codemap scan <path>`, `codemap query "..." `
+- **CLI** — `codemap scan <path>`, `codemap query "..."`
 - **MCP** — `codemap/scan`, `codemap/query` (Claude Code, AI agents)
 
 ## Alias Convention
@@ -55,3 +55,7 @@ Examples: HadstecaAtlas, DelphiAtlas, FuturaAtlas
 ## Author
 
 Built by [.dobrador](https://github.com/h4mn)
+
+---
+
+[Português](README-pt_BR.md)
