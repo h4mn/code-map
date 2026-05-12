@@ -107,3 +107,46 @@ class TestChaveDesconhecida:
         (tmp_path / ".codemap.yml").write_text("{invalid yaml", encoding="utf-8")
         config = DirmapConfig.load()
         assert config.max_depth is None
+
+
+class TestMetricsConfig:
+    def test_defaults_metrics(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        config = DirmapConfig.load()
+        assert config.metrics_enabled is True
+        assert config.metrics_languages == []
+        assert config.duplicates_min_group_size == 2
+        assert config.orphans_heuristic is True
+
+    def test_config_metrics_completo(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / ".codemap.yml").write_text(
+            "dirmap:\n"
+            "  metrics:\n"
+            "    enabled: false\n"
+            "    loc:\n"
+            "      languages: [delphi, python]\n"
+            "    duplicates:\n"
+            "      min_group_size: 3\n"
+            "    orphans:\n"
+            "      heuristic: false\n",
+            encoding="utf-8",
+        )
+        config = DirmapConfig.load()
+        assert config.metrics_enabled is False
+        assert config.metrics_languages == ["delphi", "python"]
+        assert config.duplicates_min_group_size == 3
+        assert config.orphans_heuristic is False
+
+    def test_config_metrics_parcial(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / ".codemap.yml").write_text(
+            "dirmap:\n"
+            "  metrics:\n"
+            "    enabled: true\n",
+            encoding="utf-8",
+        )
+        config = DirmapConfig.load()
+        assert config.metrics_enabled is True
+        assert config.metrics_languages == []
+        assert config.duplicates_min_group_size == 2

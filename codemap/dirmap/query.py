@@ -15,6 +15,10 @@ def query(
     type: str | None = None,
     count: bool = False,
     summary: bool = False,
+    metrics: bool = False,
+    top: int | None = None,
+    by: str | None = None,
+    min_loc: int | None = None,
 ) -> list[dict] | int | dict:
     """Filtra as entries do dirmap. Retorna lista de entries, int (count) ou dict (summary)."""
     if summary:
@@ -33,8 +37,36 @@ def query(
     if type is not None:
         filtered = [e for e in filtered if e.get("type") == type]
 
+    # Filtro por LOC mínimo
+    if min_loc is not None:
+        filtered = [
+            e for e in filtered
+            if (e.get("metrics") or {}).get("loc_code", 0) >= min_loc
+        ]
+
+    # Ordenação por métrica
+    if by is not None:
+        valid_fields = {"loc_total", "loc_code", "loc_comment", "loc_blank", "size_bytes"}
+        if by not in valid_fields:
+            raise ValueError(f"Campo inválido: '{by}'. Campos disponíveis: {', '.join(sorted(valid_fields))}")
+        filtered.sort(
+            key=lambda e: (e.get("metrics") or {}).get(by, e.get(by, 0)),
+            reverse=True,
+        )
+
+    # Top N
+    if top is not None:
+        filtered = filtered[:top]
+
     if count:
         return len(filtered)
+
+    # Remove métricas se não solicitado
+    if not metrics:
+        filtered = [
+            {k: v for k, v in e.items() if k != "metrics"}
+            for e in filtered
+        ]
 
     return filtered
 
@@ -83,6 +115,9 @@ def run_repl_cmd(filepath: str):
             print("  type <file|dir>    Filtra por tipo")
             print("  count              Conta resultados do último filtro")
             print("  summary            Mostra resumo do codebase")
+            print("  metrics            Inclui métricas na saída")
+            print("  top <N> by <campo> Top N resultados por métrica (ex: top 5 by loc_code)")
+            print("  min-loc <N>        Filtra arquivos com LOC mínimo")
             print("  help               Mostra esta ajuda")
             print("  exit               Sai do REPL")
             continue
@@ -97,14 +132,20 @@ def run_repl_cmd(filepath: str):
             i = 0
             while i < len(parts):
                 key = parts[i].lower()
-                if key in ("ext", "lang", "path", "type") and i + 1 < len(parts):
+                if key in ("ext", "lang", "path", "type", "by") and i + 1 < len(parts):
                     kwargs[key] = parts[i + 1]
+                    i += 2
+                elif key in ("top", "min-loc") and i + 1 < len(parts):
+                    kwargs[key.replace("-", "_")] = int(parts[i + 1])
                     i += 2
                 elif key == "count":
                     kwargs["count"] = True
                     i += 1
                 elif key == "summary":
                     kwargs["summary"] = True
+                    i += 1
+                elif key == "metrics":
+                    kwargs["metrics"] = True
                     i += 1
                 else:
                     i += 1
@@ -128,6 +169,14 @@ def run_repl_cmd(filepath: str):
                         print(f"  [DIR]  {entry['path']}")
                     else:
                         size = entry.get("size_bytes", 0)
-                        print(f"  {entry['path']}  ({entry.get('extension', '?')} / {entry.get('language', '?')} / {size} bytes)")
+                        m = entry.get("metrics")
+                        base = f"  {entry['path']}  ({entry.get('extension', '?')} / {entry.get('language', '?')} / {size} bytes)"
+                        if m:
+                            base += f"  [LOC: {m.get('loc_code', '?')}/{m.get('loc_total', '?')}]"
+                            if entry.get("duplicate_candidate"):
+                                base += f"  dup={entry['duplicate_group']}"
+                            if entry.get("orphan_candidate"):
+                                base += "  ORFÃO"
+                        print(base)
         else:
             print(result)

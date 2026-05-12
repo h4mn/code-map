@@ -19,6 +19,10 @@ class DirmapConfig:
     follow_symlinks: bool = False
     max_depth: int | None = None
     custom_extensions: dict[str, str] = field(default_factory=dict)
+    metrics_enabled: bool = True
+    metrics_languages: list[str] = field(default_factory=list)
+    duplicates_min_group_size: int = 2
+    orphans_heuristic: bool = True
 
     @classmethod
     def load(cls, cli_overrides: dict[str, Any] | None = None) -> DirmapConfig:
@@ -86,5 +90,21 @@ class DirmapConfig:
         for key in ("follow_symlinks", "max_depth", "indent", "format"):
             if key in override:
                 setattr(base, key, override[key])
+
+        # metrics
+        metrics = dirmap.get("metrics", {})
+        if isinstance(metrics, dict):
+            if "enabled" in metrics:
+                base.metrics_enabled = metrics["enabled"]
+            if "loc" in metrics and isinstance(metrics["loc"], dict):
+                langs = metrics["loc"].get("languages")
+                if langs:
+                    base.metrics_languages = langs
+            if "duplicates" in metrics and isinstance(metrics["duplicates"], dict):
+                if "min_group_size" in metrics["duplicates"]:
+                    base.duplicates_min_group_size = metrics["duplicates"]["min_group_size"]
+            if "orphans" in metrics and isinstance(metrics["orphans"], dict):
+                if "heuristic" in metrics["orphans"]:
+                    base.orphans_heuristic = metrics["orphans"]["heuristic"]
 
         return base
