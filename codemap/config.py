@@ -13,7 +13,7 @@ import yaml
 @dataclass
 class DirmapConfig:
     ignore_files: list[str] = field(default_factory=lambda: [".gitignore"])
-    extra_dirs: list[str] = field(default_factory=lambda: ["__pycache__", ".pytest_cache", "node_modules", ".git"])
+    extra_dirs: list[str] = field(default_factory=lambda: ["__pycache__", ".pytest_cache", "node_modules", ".git", ".svn", "*.dcu"])
     format: str = "json"
     indent: int = 2
     follow_symlinks: bool = False
