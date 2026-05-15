@@ -19,10 +19,18 @@ def query(
     top: int | None = None,
     by: str | None = None,
     min_loc: int | None = None,
+    depends_on: str | None = None,
+    depended_by: str | None = None,
+    cycles: bool = False,
 ) -> list[dict] | int | dict:
     """Filtra as entries do dirmap. Retorna lista de entries, int (count) ou dict (summary)."""
     if summary:
         return data.get("summary", {})
+
+    # Cycles — retorna lista de ciclos do dependency_graph
+    if cycles:
+        graph = data.get("dependency_graph", {})
+        return graph.get("cycles", [])
 
     entries = data.get("tree", [])
     filtered = entries
@@ -43,6 +51,21 @@ def query(
             e for e in filtered
             if (e.get("metrics") or {}).get("loc_code", 0) >= min_loc
         ]
+
+    # Dependency filters
+    if depends_on is not None:
+        graph = data.get("dependency_graph", {})
+        edges = graph.get("edges", [])
+        # Encontra quem importa o path dado (edges onde to == depends_on)
+        source_paths = {e["from"] for e in edges if e["to"] == depends_on}
+        filtered = [e for e in filtered if e.get("path") in source_paths]
+
+    if depended_by is not None:
+        graph = data.get("dependency_graph", {})
+        edges = graph.get("edges", [])
+        # Encontra o que o path dado importa (edges onde from == depended_by)
+        target_paths = {e["to"] for e in edges if e["from"] == depended_by}
+        filtered = [e for e in filtered if e.get("path") in target_paths]
 
     # Ordenação por métrica
     if by is not None:
@@ -118,6 +141,9 @@ def run_repl_cmd(filepath: str):
             print("  metrics            Inclui métricas na saída")
             print("  top <N> by <campo> Top N resultados por métrica (ex: top 5 by loc_code)")
             print("  min-loc <N>        Filtra arquivos com LOC mínimo")
+            print("  depends-on <path>  Quem importa o arquivo dado")
+            print("  depended-by <path> O que o arquivo dado importa")
+            print("  cycles             Lista ciclos de dependência")
             print("  help               Mostra esta ajuda")
             print("  exit               Sai do REPL")
             continue
@@ -126,6 +152,15 @@ def run_repl_cmd(filepath: str):
             result = query(data, summary=True)
         elif line == "count":
             result = f"{data.get('summary', {}).get('total_files', 0)} arquivos no total"
+        elif line == "cycles":
+            result = query(data, cycles=True)
+            if not result:
+                print("Nenhum ciclo encontrado.")
+            else:
+                print(f"{len(result)} ciclo(s) encontrado(s):")
+                for cycle in result:
+                    print(f"  {' -> '.join(cycle)}")
+            continue
         else:
             parts = line.split()
             kwargs = {}
@@ -138,6 +173,9 @@ def run_repl_cmd(filepath: str):
                 elif key in ("top", "min-loc") and i + 1 < len(parts):
                     kwargs[key.replace("-", "_")] = int(parts[i + 1])
                     i += 2
+                elif key in ("depends-on", "depended-by") and i + 1 < len(parts):
+                    kwargs[key.replace("-", "_")] = parts[i + 1]
+                    i += 2
                 elif key == "count":
                     kwargs["count"] = True
                     i += 1
@@ -146,6 +184,9 @@ def run_repl_cmd(filepath: str):
                     i += 1
                 elif key == "metrics":
                     kwargs["metrics"] = True
+                    i += 1
+                elif key == "cycles":
+                    kwargs["cycles"] = True
                     i += 1
                 else:
                     i += 1
@@ -177,6 +218,10 @@ def run_repl_cmd(filepath: str):
                                 base += f"  dup={entry['duplicate_group']}"
                             if entry.get("orphan_candidate"):
                                 base += "  ORFÃO"
+                        imports = entry.get("imports")
+                        if imports:
+                            resolved = [imp.get("resolved_path") or imp.get("name", "?") for imp in imports]
+                            base += f"  imports=[{', '.join(resolved)}]"
                         print(base)
         else:
             print(result)

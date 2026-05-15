@@ -23,6 +23,9 @@ class DirmapConfig:
     metrics_languages: list[str] = field(default_factory=list)
     duplicates_min_group_size: int = 2
     orphans_heuristic: bool = True
+    delphi_search_paths: list[str] = field(default_factory=list)
+    python_paths: list[str] = field(default_factory=list)
+    js_aliases: dict[str, str] = field(default_factory=dict)
 
     @classmethod
     def load(cls, cli_overrides: dict[str, Any] | None = None) -> DirmapConfig:
@@ -106,5 +109,15 @@ class DirmapConfig:
             if "orphans" in metrics and isinstance(metrics["orphans"], dict):
                 if "heuristic" in metrics["orphans"]:
                     base.orphans_heuristic = metrics["orphans"]["heuristic"]
+
+        # uses
+        uses = dirmap.get("uses", {})
+        if isinstance(uses, dict):
+            if "delphi_search_paths" in uses:
+                base.delphi_search_paths = uses["delphi_search_paths"]
+            if "python_paths" in uses:
+                base.python_paths = uses["python_paths"]
+            if "js_aliases" in uses:
+                base.js_aliases = uses["js_aliases"]
 
         return base

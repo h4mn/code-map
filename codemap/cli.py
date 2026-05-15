@@ -10,6 +10,7 @@ from codemap.registry import CommandRegistry
 
 import codemap.dirmap  # registra comandos dirmap e version
 import codemap.metrics  # registra comando metrics
+import codemap.uses     # registra comando uses
 
 
 def main():

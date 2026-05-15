@@ -101,3 +101,97 @@ class TestQueryVazio:
         data = {"tree": [], "summary": {"total_files": 0}}
         result = query(data, ext=".pas")
         assert result == []
+
+
+# ---------------------------------------------------------------------------
+# Dependency graph queries (depends_on, depended_by, cycles)
+# ---------------------------------------------------------------------------
+
+DATA_WITH_GRAPH = {
+    "meta": {"root_name": "TestRepo"},
+    "summary": {"total_files": 3, "total_dirs": 0},
+    "tree": [
+        {"path": "src/A.py", "type": "file", "extension": ".py", "language": "python"},
+        {"path": "src/B.py", "type": "file", "extension": ".py", "language": "python"},
+        {"path": "src/C.py", "type": "file", "extension": ".py", "language": "python"},
+    ],
+    "dependency_graph": {
+        "nodes": [
+            {"id": "src/A.py", "fan_in": 1, "fan_out": 1},
+            {"id": "src/B.py", "fan_in": 2, "fan_out": 1},
+            {"id": "src/C.py", "fan_in": 0, "fan_out": 1},
+        ],
+        "edges": [
+            {"from": "src/A.py", "to": "src/B.py"},
+            {"from": "src/C.py", "to": "src/B.py"},
+            {"from": "src/B.py", "to": "src/A.py"},
+        ],
+        "cycles": [
+            ["src/A.py", "src/B.py", "src/A.py"],
+        ],
+    },
+}
+
+
+class TestQueryDependsOn:
+    def test_depends_on_returns_who_imports_target(self):
+        """depends_on: encontra quem importa o caminho dado."""
+        result = query(DATA_WITH_GRAPH, depends_on="src/B.py")
+        assert isinstance(result, list)
+        # A e C importam B
+        paths = [e["path"] for e in result]
+        assert "src/A.py" in paths
+        assert "src/C.py" in paths
+
+    def test_depends_on_no_match(self):
+        result = query(DATA_WITH_GRAPH, depends_on="nonexistent.py")
+        assert result == []
+
+    def test_depends_on_none_is_noop(self):
+        result = query(DATA_WITH_GRAPH, depends_on=None)
+        # Sem filtro de dependência, retorna entries normais (sem métricas)
+        assert len(result) == 3
+
+
+class TestQueryDependedBy:
+    def test_depended_by_returns_what_source_imports(self):
+        """depended_by: encontra o que o caminho dado importa."""
+        result = query(DATA_WITH_GRAPH, depended_by="src/A.py")
+        assert isinstance(result, list)
+        paths = [e["path"] for e in result]
+        # A importa B
+        assert "src/B.py" in paths
+
+    def test_depended_by_no_match(self):
+        result = query(DATA_WITH_GRAPH, depended_by="nonexistent.py")
+        assert result == []
+
+    def test_depended_by_none_is_noop(self):
+        result = query(DATA_WITH_GRAPH, depended_by=None)
+        assert len(result) == 3
+
+
+class TestQueryCycles:
+    def test_cycles_returns_cycle_list(self):
+        result = query(DATA_WITH_GRAPH, cycles=True)
+        assert isinstance(result, list)
+        assert len(result) >= 1
+        # Pelo menos um ciclo contém A e B
+        found = any("src/A.py" in c and "src/B.py" in c for c in result)
+        assert found
+
+    def test_cycles_false_returns_entries(self):
+        result = query(DATA_WITH_GRAPH, cycles=False)
+        # cycles=False é o default, retorna entries
+        assert isinstance(result, list)
+        assert len(result) == 3
+
+    def test_cycles_empty_when_no_graph(self):
+        data = {"tree": [], "summary": {}, "dependency_graph": {"nodes": [], "edges": [], "cycles": []}}
+        result = query(data, cycles=True)
+        assert result == []
+
+    def test_cycles_missing_dependency_graph(self):
+        data = {"tree": [], "summary": {}}
+        result = query(data, cycles=True)
+        assert result == []
