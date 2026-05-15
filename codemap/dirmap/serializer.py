@@ -79,6 +79,7 @@ def run_dirmap(
     output: str = "dirmap.json",
     stdout: bool = False,
     with_metrics: bool = False,
+    with_uses: bool = False,
     **cli_overrides,
 ):
     """Ponto de entrada do comando dirmap."""
@@ -89,6 +90,10 @@ def run_dirmap(
     if with_metrics:
         from codemap.metrics.enricher import enrich_dirmap
         data = enrich_dirmap(data, root, config)
+
+    if with_uses:
+        from codemap.uses.enricher import enrich_dirmap_with_uses
+        data = enrich_dirmap_with_uses(data, root, config)
 
     json_str = json.dumps(data, indent=config.indent, ensure_ascii=False)
 

@@ -6,15 +6,15 @@ from codemap.dirmap.query import run_query_cmd, run_repl_cmd
 
 
 @CommandRegistry.register("dirmap", "Indexa estrutura física de um codebase", "escaneamento")
-def cmd_dirmap(root: str, output: str = "dirmap.json", stdout: bool = False, follow_symlinks: bool = False, with_metrics: bool = False, **kwargs):
+def cmd_dirmap(root: str, output: str = "dirmap.json", stdout: bool = False, follow_symlinks: bool = False, with_metrics: bool = False, with_uses: bool = False, **kwargs):
     """Indexa a estrutura física de um codebase e gera JSON."""
-    run_dirmap(root, output=output, stdout=stdout, follow_symlinks=follow_symlinks, with_metrics=with_metrics, **kwargs)
+    run_dirmap(root, output=output, stdout=stdout, follow_symlinks=follow_symlinks, with_metrics=with_metrics, with_uses=with_uses, **kwargs)
 
 
 @CommandRegistry.register("query", "Consulta dados de um dirmap gerado", "consulta")
-def cmd_query(filepath: str, ext: str = None, lang: str = None, path: str = None, type: str = None, count: bool = False, summary: bool = False, metrics: bool = False, top: int = None, by: str = None, min_loc: int = None):
+def cmd_query(filepath: str, ext: str = None, lang: str = None, path: str = None, type: str = None, count: bool = False, summary: bool = False, metrics: bool = False, top: int = None, by: str = None, min_loc: int = None, depends_on: str = None, depended_by: str = None, cycles: bool = False):
     """Consulta dados de um dirmap gerado."""
-    run_query_cmd(filepath, ext=ext, lang=lang, path=path, type=type, count=count, summary=summary, metrics=metrics, top=top, by=by, min_loc=min_loc)
+    run_query_cmd(filepath, ext=ext, lang=lang, path=path, type=type, count=count, summary=summary, metrics=metrics, top=top, by=by, min_loc=min_loc, depends_on=depends_on, depended_by=depended_by, cycles=cycles)
 
 
 @CommandRegistry.register("repl", "REPL interativo para consultas", "consulta")
