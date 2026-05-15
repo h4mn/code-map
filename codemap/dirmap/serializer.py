@@ -92,6 +92,7 @@ def run_dirmap(
         data = enrich_dirmap(data, root, config)
 
     if with_uses:
+        print("Extraindo dependências (uses)...", file=sys.stderr)
         from codemap.uses.enricher import enrich_dirmap_with_uses
         data = enrich_dirmap_with_uses(data, root, config)
 
