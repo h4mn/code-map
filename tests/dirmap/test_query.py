@@ -152,6 +152,27 @@ class TestQueryDependsOn:
         # Sem filtro de dependência, retorna entries normais (sem métricas)
         assert len(result) == 3
 
+    def test_depends_on_backslash_normalized(self):
+        """depends_on: normaliza backslashes para forward slashes."""
+        result = query(DATA_WITH_GRAPH, depends_on="src\\B.py")
+        paths = [e["path"] for e in result]
+        assert "src/A.py" in paths
+        assert "src/C.py" in paths
+
+    def test_depends_on_basename_match(self):
+        """depends_on: fallback para basename quando path exato não match."""
+        result = query(DATA_WITH_GRAPH, depends_on="B")
+        paths = [e["path"] for e in result]
+        assert "src/A.py" in paths
+        assert "src/C.py" in paths
+
+    def test_depends_on_substring_match(self):
+        """depends_on: fallback para substring quando exato não match."""
+        result = query(DATA_WITH_GRAPH, depends_on="B.py")
+        paths = [e["path"] for e in result]
+        assert "src/A.py" in paths
+        assert "src/C.py" in paths
+
 
 class TestQueryDependedBy:
     def test_depended_by_returns_what_source_imports(self):
@@ -169,6 +190,18 @@ class TestQueryDependedBy:
     def test_depended_by_none_is_noop(self):
         result = query(DATA_WITH_GRAPH, depended_by=None)
         assert len(result) == 3
+
+    def test_depended_by_backslash_normalized(self):
+        """depended_by: normaliza backslashes para forward slashes."""
+        result = query(DATA_WITH_GRAPH, depended_by="src\\A.py")
+        paths = [e["path"] for e in result]
+        assert "src/B.py" in paths
+
+    def test_depended_by_basename_match(self):
+        """depended_by: fallback para basename quando path exato não match."""
+        result = query(DATA_WITH_GRAPH, depended_by="A")
+        paths = [e["path"] for e in result]
+        assert "src/B.py" in paths
 
 
 class TestQueryCycles:

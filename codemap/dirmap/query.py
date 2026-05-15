@@ -4,7 +4,28 @@ from __future__ import annotations
 
 import json
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
+
+
+def _match_edges(edges: list[dict], value: str, direction: str) -> set[str]:
+    """Match edges com normalização + fallback para substring/basename."""
+    key = direction  # "from" ou "to"
+    other = "from" if key == "to" else "to"
+
+    # 1. Match exato
+    matched = {e[other] for e in edges if e[key] == value}
+    if matched:
+        return matched
+
+    # 2. Substring (value contido no path da edge)
+    matched = {e[other] for e in edges if value in e[key]}
+    if matched:
+        return matched
+
+    # 3. Basename (stem sem extensão)
+    value_stem = PurePosixPath(value).stem.lower()
+    matched = {e[other] for e in edges if PurePosixPath(e[key]).stem.lower() == value_stem}
+    return matched
 
 
 def query(
@@ -52,19 +73,19 @@ def query(
             if (e.get("metrics") or {}).get("loc_code", 0) >= min_loc
         ]
 
-    # Dependency filters
+    # Dependency filters — com normalização e matching flexível
     if depends_on is not None:
         graph = data.get("dependency_graph", {})
         edges = graph.get("edges", [])
-        # Encontra quem importa o path dado (edges onde to == depends_on)
-        source_paths = {e["from"] for e in edges if e["to"] == depends_on}
+        target = depends_on.replace("\\", "/")
+        source_paths = _match_edges(edges, target, direction="to")
         filtered = [e for e in filtered if e.get("path") in source_paths]
 
     if depended_by is not None:
         graph = data.get("dependency_graph", {})
         edges = graph.get("edges", [])
-        # Encontra o que o path dado importa (edges onde from == depended_by)
-        target_paths = {e["to"] for e in edges if e["from"] == depended_by}
+        source = depended_by.replace("\\", "/")
+        target_paths = _match_edges(edges, source, direction="from")
         filtered = [e for e in filtered if e.get("path") in target_paths]
 
     # Ordenação por métrica
