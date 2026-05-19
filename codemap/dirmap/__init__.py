@@ -3,6 +3,7 @@
 from codemap.registry import CommandRegistry
 from codemap.dirmap.serializer import run_dirmap
 from codemap.dirmap.query import run_query_cmd, run_repl_cmd
+from codemap.dirmap.lookup import run_lookup_cmd
 
 
 @CommandRegistry.register("dirmap", "Indexa estrutura física de um codebase", "escaneamento")
@@ -12,15 +13,21 @@ def cmd_dirmap(root: str, output: str = "dirmap.json", stdout: bool = False, fol
 
 
 @CommandRegistry.register("query", "Consulta dados de um dirmap gerado", "consulta")
-def cmd_query(filepath: str, ext: str = None, lang: str = None, path: str = None, type: str = None, count: bool = False, summary: bool = False, metrics: bool = False, top: int = None, by: str = None, min_loc: int = None, depends_on: str = None, depended_by: str = None, cycles: bool = False):
+def cmd_query(filepath: str, ext: str = None, lang: str = None, path: str = None, type: str = None, count: bool = False, summary: bool = False, metrics: bool = False, top: int = None, by: str = None, min_loc: int = None, depends_on: str = None, depended_by: str = None, cycles: bool = False, case_sensitive: bool = False):
     """Consulta dados de um dirmap gerado."""
-    run_query_cmd(filepath, ext=ext, lang=lang, path=path, type=type, count=count, summary=summary, metrics=metrics, top=top, by=by, min_loc=min_loc, depends_on=depends_on, depended_by=depended_by, cycles=cycles)
+    run_query_cmd(filepath, ext=ext, lang=lang, path=path, type=type, count=count, summary=summary, metrics=metrics, top=top, by=by, min_loc=min_loc, depends_on=depends_on, depended_by=depended_by, cycles=cycles, case_sensitive=case_sensitive)
 
 
 @CommandRegistry.register("repl", "REPL interativo para consultas", "consulta")
 def cmd_repl(filepath: str):
     """REPL interativo para consultas."""
     run_repl_cmd(filepath)
+
+
+@CommandRegistry.register("lookup", "Busca declarações de tipos/constantes/enums", "análise")
+def cmd_lookup(symbol: str, filepath: str, lang: str = None):
+    """Busca declarações de símbolos (tipos, constantes, enums)."""
+    run_lookup_cmd(symbol, filepath, lang=lang)
 
 
 @CommandRegistry.register("version", "Mostra versão atual", "geral")

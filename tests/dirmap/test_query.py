@@ -228,3 +228,102 @@ class TestQueryCycles:
         data = {"tree": [], "summary": {}}
         result = query(data, cycles=True)
         assert result == []
+
+
+# ---------------------------------------------------------------------------
+# Substring path matching (melhoria #1)
+# ---------------------------------------------------------------------------
+
+class TestQueryPathSubstring:
+    def test_path_substring_match(self):
+        """--path deve fazer substring match, não só prefixo."""
+        result = query(SAMPLE_DATA, path="Model")
+        paths = [e["path"] for e in result]
+        assert "src/Model/Clientes.pas" in paths
+        assert "src/Model/Utils.pas" in paths
+        assert "src/Model" in paths
+
+    def test_path_substring_nome_arquivo(self):
+        """--path deve buscar no nome do arquivo também, não só diretório."""
+        result = query(SAMPLE_DATA, path="Clientes")
+        paths = [e["path"] for e in result]
+        assert "src/Model/Clientes.pas" in paths
+
+    def test_path_substring_sem_match(self):
+        result = query(SAMPLE_DATA, path="Inexistente")
+        assert result == []
+
+    def test_path_preserva_compat_prefixo(self):
+        """--path com prefixo de diretório continua funcionando."""
+        result = query(SAMPLE_DATA, path="src/Model")
+        assert len(result) == 3  # 2 files + 1 dir
+
+
+# ---------------------------------------------------------------------------
+# Case-insensitive (melhoria #3)
+# ---------------------------------------------------------------------------
+
+class TestQueryCaseInsensitive:
+    def test_path_case_insensitive_default(self):
+        """Busca de path deve ser case-insensitive por padrão."""
+        result_lower = query(SAMPLE_DATA, path="model")
+        result_upper = query(SAMPLE_DATA, path="Model")
+        paths_lower = {e["path"] for e in result_lower}
+        paths_upper = {e["path"] for e in result_upper}
+        assert paths_lower == paths_upper
+
+    def test_ext_case_insensitive_default(self):
+        """ext deve ser case-insensitive por padrão."""
+        result = query(SAMPLE_DATA, ext=".PAS")
+        assert len(result) == 2
+
+    def test_lang_case_insensitive_default(self):
+        """lang deve ser case-insensitive por padrão."""
+        result = query(SAMPLE_DATA, lang="Delphi")
+        assert len(result) == 2
+
+    def test_case_sensitive_override_path(self):
+        """Com case_sensitive=True, path respeita case."""
+        result = query(SAMPLE_DATA, path="model", case_sensitive=True)
+        assert result == []
+
+    def test_case_sensitive_override_ext(self):
+        """Com case_sensitive=True, ext respeita case."""
+        result = query(SAMPLE_DATA, ext=".PAS", case_sensitive=True)
+        assert result == []
+
+
+# ---------------------------------------------------------------------------
+# Glob/wildcard no --path (melhoria #5)
+# ---------------------------------------------------------------------------
+
+class TestQueryPathGlob:
+    def test_path_glob_asterisco(self):
+        """--path com * deve fazer glob matching."""
+        result = query(SAMPLE_DATA, path="*Clientes*")
+        paths = [e["path"] for e in result]
+        assert "src/Model/Clientes.pas" in paths
+
+    def test_path_glob_segmento_diretorio(self):
+        """--path com glob de segmento de diretório."""
+        result = query(SAMPLE_DATA, path="*/Model/*")
+        paths = [e["path"] for e in result]
+        assert "src/Model/Clientes.pas" in paths
+        assert "src/Model/Utils.pas" in paths
+
+    def test_path_glob_extensao(self):
+        """--path com glob de extensão."""
+        result = query(SAMPLE_DATA, path="*.pas")
+        paths = [e["path"] for e in result]
+        assert len(paths) == 2
+        assert all(p.endswith(".pas") for p in paths)
+
+    def test_path_glob_sem_match(self):
+        result = query(SAMPLE_DATA, path="*Inexistente*")
+        assert result == []
+
+    def test_path_glob_case_insensitive(self):
+        """Glob também deve ser case-insensitive por padrão."""
+        result = query(SAMPLE_DATA, path="*clientes*")
+        paths = [e["path"] for e in result]
+        assert "src/Model/Clientes.pas" in paths

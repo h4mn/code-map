@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import fnmatch
 import json
 import sys
 from pathlib import Path, PurePosixPath
@@ -43,6 +44,7 @@ def query(
     depends_on: str | None = None,
     depended_by: str | None = None,
     cycles: bool = False,
+    case_sensitive: bool = False,
 ) -> list[dict] | int | dict:
     """Filtra as entries do dirmap. Retorna lista de entries, int (count) ou dict (summary)."""
     if summary:
@@ -57,12 +59,35 @@ def query(
     filtered = entries
 
     if ext is not None:
-        filtered = [e for e in filtered if e.get("extension") == ext]
+        if case_sensitive:
+            filtered = [e for e in filtered if e.get("extension") == ext]
+        else:
+            ext_lower = ext.lower()
+            filtered = [e for e in filtered if (e.get("extension") or "").lower() == ext_lower]
     if lang is not None:
-        filtered = [e for e in filtered if e.get("language") == lang]
+        if case_sensitive:
+            filtered = [e for e in filtered if e.get("language") == lang]
+        else:
+            lang_lower = lang.lower()
+            filtered = [e for e in filtered if (e.get("language") or "").lower() == lang_lower]
     if path is not None:
         path_norm = path.replace("\\", "/")
-        filtered = [e for e in filtered if e.get("path", "").startswith(path_norm)]
+        if case_sensitive:
+            if any(c in path_norm for c in ("*", "?", "[")):
+                filtered = [e for e in filtered if fnmatch.fnmatch(e.get("path", ""), path_norm)]
+            else:
+                filtered = [e for e in filtered if path_norm in e.get("path", "")]
+        else:
+            if any(c in path_norm for c in ("*", "?", "[")):
+                filtered = [
+                    e for e in filtered
+                    if fnmatch.fnmatch(e.get("path", "").lower(), path_norm.lower())
+                ]
+            else:
+                filtered = [
+                    e for e in filtered
+                    if path_norm.lower() in e.get("path", "").lower()
+                ]
     if type is not None:
         filtered = [e for e in filtered if e.get("type") == type]
 
@@ -155,8 +180,9 @@ def run_repl_cmd(filepath: str):
         if line.lower() == "help":
             print("  ext <extensão>     Filtra por extensão (ex: ext .pas)")
             print("  lang <linguagem>   Filtra por linguagem (ex: lang delphi)")
-            print("  path <prefixo>     Filtra por caminho (ex: path src/Model)")
+            print("  path <termo>       Busca substring/glob no caminho (ex: path Model, path *.pas)")
             print("  type <file|dir>    Filtra por tipo")
+            print("  case-sensitive     Ativa busca case-sensitive")
             print("  count              Conta resultados do último filtro")
             print("  summary            Mostra resumo do codebase")
             print("  metrics            Inclui métricas na saída")
@@ -208,6 +234,9 @@ def run_repl_cmd(filepath: str):
                     i += 1
                 elif key == "cycles":
                     kwargs["cycles"] = True
+                    i += 1
+                elif key == "case-sensitive":
+                    kwargs["case_sensitive"] = True
                     i += 1
                 else:
                     i += 1
