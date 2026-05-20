@@ -24,31 +24,27 @@ Ou sem instalar — basta rodar `codemap.cmd` na raiz do repositório.
 # Gerar índice de um codebase
 codemap dirmap ./meu-projeto
 
+# Com métricas e dependências
+codemap dirmap ./meu-projeto --with-metrics --with-uses
+
 # Ver resultado no terminal (sem escrever no disco)
 codemap dirmap ./meu-projeto --stdout
 
-# Consultar o índice
-codemap query dirmap.json --ext .pas
-codemap query dirmap.json --lang delphi
-codemap query dirmap.json --summary
+# Consultar o índice (filepath opcional com .codemap.yml)
+codemap query --ext .pas
+codemap query --path Etiqueta
+codemap query --path "*Modelo*" --count
+codemap query --summary
+
+# Buscar declarações de tipos/constantes/enums
+codemap lookup TRelatorioModelo
+codemap lookup MAX_RETRIES --lang delphi
 
 # Explorar interativamente
-codemap repl dirmap.json
+codemap repl
 
 # Help dinâmico (lista todos os comandos)
 codemap
-```
-
-### REPL
-
-```
-codemap> ext .pas              # filtra por extensão
-codemap> lang delphi           # filtra por linguagem
-codemap> path src/Model        # filtra por caminho
-codemap> type dir              # lista apenas diretórios
-codemap> count                 # conta resultados
-codemap> summary               # resumo do codebase
-codemap> help                  # detalhes dos filtros
 ```
 
 ### Configuração
@@ -57,6 +53,7 @@ Crie `.codemap.yml` na raiz do projeto:
 
 ```yaml
 dirmap:
+  default_dirmap: dirmap.json    # filepath padrão — não precisa mais digitar
   ignore:
     files: [.gitignore, .codemap-ignore]
     extra_dirs: [bin, obj]
@@ -69,9 +66,60 @@ dirmap:
   classifier:
     custom_extensions:
       .dpr: delphi-entry
+  uses:
+    delphi_search_paths: [src, lib]
+    python_paths: [src]
 ```
 
-Configuração merge de 4 camadas: defaults → global (`~/.codemap/config.yml`) → projeto (`.codemap.yml`) → flags CLI.
+Config merge de 4 camadas: defaults → global (`~/.codemap/config.yml`) → projeto (`.codemap.yml`) → flags CLI.
+
+### Consultas (query)
+
+| Flag | Descrição | Exemplo |
+|------|-----------|---------|
+| `--ext` | Filtra por extensão | `--ext .pas` |
+| `--lang` | Filtra por linguagem | `--lang delphi` |
+| `--path` | Busca substring/glob no caminho | `--path Etiqueta`, `--path "*.pas"` |
+| `--type` | Filtra por tipo (file/dir) | `--type file` |
+| `--count` | Conta resultados | `--count` |
+| `--summary` | Resumo do codebase | `--summary` |
+| `--metrics` | Inclui métricas na saída | `--metrics` |
+| `--top N --by campo` | Top N por métrica | `--top 10 --by loc_code` |
+| `--min-loc N` | LOC mínimo | `--min-loc 100` |
+| `--depends-on` | Quem importa o arquivo | `--depends-on src/Utils.pas` |
+| `--depended-by` | O que o arquivo importa | `--depended-by src/Main.pas` |
+| `--cycles` | Lista ciclos de dependência | `--cycles` |
+| `--case-sensitive` | Busca case-sensitive | `--case-sensitive` |
+
+Todas as buscas são **case-insensitive** por padrão. O `--path` suporta substring e glob (`*`, `?`, `[seq]`).
+
+### Lookup de símbolos
+
+Busca declarações de tipos, constantes e enums via regex:
+
+```bash
+codemap lookup TRelatorioModelo         # encontra declarações de type
+codemap lookup MAX_RETRIES              # encontra declarações de const
+codemap lookup TRDinTp_Etiqueta         # encontra declarações de enum
+codemap lookup Relatorio --lang delphi  # substring + filtro de linguagem
+```
+
+### REPL
+
+```
+codemap> ext .pas              # filtra por extensão
+codemap> lang delphi           # filtra por linguagem
+codemap> path Etiqueta         # busca substring no caminho
+codemap> path "*.pas"          # glob matching
+codemap> case-sensitive        # ativa busca case-sensitive
+codemap> type dir              # lista apenas diretórios
+codemap> count                 # conta resultados
+codemap> summary               # resumo do codebase
+codemap> top 5 by loc_code     # top 5 por LOC de código
+codemap> depends-on Utils      # quem importa Utils
+codemap> cycles                # ciclos de dependência
+codemap> help                  # detalhes dos filtros
+```
 
 ## Arquitetura
 
@@ -90,10 +138,12 @@ Configuração merge de 4 camadas: defaults → global (`~/.codemap/config.yml`)
 | Passo | O quê | Status |
 |-------|-------|--------|
 | 1 | Dirmap — estrutura de arquivos, tipos | **Feito** |
-| 2 | Métricas — LOC, órfãos, duplicatas | Planejado |
-| 3 | Extração de `uses` — mapa de dependências | Planejado |
+| 2 | Métricas — LOC, órfãos, duplicatas, análise estrutural | **Feito** |
+| 3 | Extração de `uses` — mapa de dependências | **Feito** |
 | 4 | Parser AST — classes, métodos, herança | Planejado |
 | 5 | Grafo de impacto — "o que quebra se eu mudar X?" | Planejado |
+| 6 | RAG Semântico — ChromaDB + busca semântica | Planejado |
+| 7 | Agente — interface conversacional (MCP / webchat) | Planejado |
 
 ## Linguagens Suportadas
 
@@ -117,34 +167,63 @@ Extensões customizáveis via `custom_extensions` no `.codemap.yml`.
 
 ```
 codemap/
-├── cli.py              # Entrypoint CLI
+├── cli.py              # Entrypoint CLI + resolução de default_dirmap
 ├── registry.py         # Registro dinâmico de comandos
-├── config.py           # Configuração (merge de camadas)
+├── config.py           # Configuração (merge de 4 camadas)
 ├── health.py           # Validação de dependências
 └── dirmap/
     ├── walker.py       # Caminha árvore de diretórios
     ├── ignore.py       # Parser de .gitignore / .codemap-ignore
     ├── classifier.py   # Extensão → linguagem
     ├── serializer.py   # WalkResult → JSON
-    └── query.py        # Motor de consultas + REPL
+    ├── query.py        # Motor de consultas + REPL
+    └── lookup.py       # Lookup de símbolos (tipos, consts, enums)
+└── uses/
+    ├── parser.py       # Dispatcher de parsers por linguagem
+    ├── delphi.py       # Parser de uses Delphi
+    ├── python.py       # Parser de imports Python
+    ├── js_ts.py        # Parser de imports JS/TS
+    ├── resolver.py     # Resolução de paths de dependência
+    ├── graph.py        # Grafo de dependências + ciclos
+    └── enricher.py     # Enriquece dirmap com dependências
+└── metrics/
+    ├── counter.py      # Contador de LOC por linguagem
+    ├── finder.py       # Duplicatas e órfãos
+    ├── aggregator.py   # Agregação de métricas
+    └── enricher.py     # Enriquece dirmap com métricas
 tests/
 ├── test_registry.py
 ├── test_health.py
 ├── test_cli_integration.py
-└── dirmap/
-    ├── test_config.py
-    ├── test_walker.py
-    ├── test_ignore.py
-    ├── test_classifier.py
-    ├── test_serializer.py
-    └── test_query.py
+├── dirmap/
+│   ├── test_config.py
+│   ├── test_walker.py
+│   ├── test_ignore.py
+│   ├── test_classifier.py
+│   ├── test_serializer.py
+│   ├── test_query.py
+│   └── test_lookup.py
+├── metrics/
+│   ├── test_counter.py
+│   ├── test_finder.py
+│   ├── test_aggregator.py
+│   └── test_enricher.py
+└── uses/
+    ├── test_delphi.py
+    ├── test_python.py
+    ├── test_js_ts.py
+    ├── test_parser.py
+    ├── test_resolver.py
+    ├── test_graph.py
+    ├── test_enricher.py
+    └── test_uses_config.py
 ```
 
 ## Convenção de Alias
 
 Cada repositório indexado recebe um alias: `[Repo]Atlas`
 
-Exemplos: HadstecaAtlas, DelphiAtlas, FuturaAtlas
+Exemplos: HadstecaAtlas, DelphiAtlas
 
 ## Autor
 
