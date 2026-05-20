@@ -223,7 +223,7 @@ tests/
 
 Cada repositório indexado recebe um alias: `[Repo]Atlas`
 
-Exemplos: HadstecaAtlas, DelphiAtlas
+Exemplos: SkybridgeAtlas, HadstecaAtlas, DelphiAtlas
 
 ## Autor
 
