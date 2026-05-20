@@ -106,6 +106,8 @@ def lookup(
 
 def run_lookup_cmd(symbol: str, filepath: str, **kwargs):
     """Ponto de entrada do subcomando lookup."""
+    if not filepath:
+        raise FileNotFoundError("Nenhum dirmap especificado. Passe o arquivo ou configure default_dirmap em .codemap.yml")
     from codemap.dirmap.query import load_dirmap_json
     data = load_dirmap_json(filepath)
     lang = kwargs.get("lang")

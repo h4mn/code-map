@@ -12,6 +12,22 @@ import codemap.dirmap  # registra comandos dirmap e version
 import codemap.metrics  # registra comando metrics
 import codemap.uses     # registra comando uses
 
+# Comandos que usam filepath de dirmap (podem omitir se config tiver default_dirmap)
+_DIRMAP_COMMANDS = {"query", "repl", "lookup", "uses", "metrics"}
+
+
+def _resolve_filepath(kwargs: dict, command: str | None) -> dict:
+    """Se filepath for None, tenta resolver via default_dirmap do config."""
+    if kwargs.get("filepath") is not None:
+        return kwargs
+    if command not in _DIRMAP_COMMANDS:
+        return kwargs
+    from codemap.config import DirmapConfig
+    config = DirmapConfig.load()
+    if config.default_dirmap:
+        kwargs["filepath"] = config.default_dirmap
+    return kwargs
+
 
 def main():
     check_dependencies()
@@ -33,10 +49,12 @@ def main():
         sys.exit(1)
 
     kwargs = vars(args)
-    kwargs.pop("command", None)
+    command_name = kwargs.pop("command", None)
     # Mapeia nomes reservados de volta (type -> type para query)
     if "filter_type" in kwargs:
         kwargs["type"] = kwargs.pop("filter_type")
+
+    kwargs = _resolve_filepath(kwargs, command_name)
 
     try:
         cmd.fn(**kwargs)

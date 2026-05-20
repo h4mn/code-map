@@ -26,6 +26,7 @@ class DirmapConfig:
     delphi_search_paths: list[str] = field(default_factory=list)
     python_paths: list[str] = field(default_factory=list)
     js_aliases: dict[str, str] = field(default_factory=dict)
+    default_dirmap: str | None = None
 
     @classmethod
     def load(cls, cli_overrides: dict[str, Any] | None = None) -> DirmapConfig:
@@ -88,6 +89,10 @@ class DirmapConfig:
         if isinstance(classifier, dict):
             if "custom_extensions" in classifier:
                 base.custom_extensions = classifier["custom_extensions"]
+
+        # default_dirmap
+        if "default_dirmap" in dirmap:
+            base.default_dirmap = dirmap["default_dirmap"]
 
         # CLI-level overrides (top-level keys that match fields)
         for key in ("follow_symlinks", "max_depth", "indent", "format"):

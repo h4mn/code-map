@@ -150,6 +150,8 @@ def load_dirmap_json(filepath: str) -> dict:
 
 def run_query_cmd(filepath: str, **filters):
     """Ponto de entrada do subcomando query."""
+    if not filepath:
+        raise FileNotFoundError("Nenhum dirmap especificado. Passe o arquivo ou configure default_dirmap em .codemap.yml")
     data = load_dirmap_json(filepath)
     # Remove stdout do query (não é filtro)
     filters.pop("stdout", None)
@@ -159,6 +161,8 @@ def run_query_cmd(filepath: str, **filters):
 
 def run_repl_cmd(filepath: str):
     """Ponto de entrada do REPL."""
+    if not filepath:
+        raise FileNotFoundError("Nenhum dirmap especificado. Passe o arquivo ou configure default_dirmap em .codemap.yml")
     data = load_dirmap_json(filepath)
     root_name = data.get("meta", {}).get("root_name", filepath)
     total = data.get("summary", {}).get("total_files", "?")

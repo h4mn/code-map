@@ -1,6 +1,7 @@
 """Testes de integração — CLI ponta-a-ponta."""
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -130,6 +131,36 @@ class TestCLIPontaAPonta:
         assert result.returncode == 0
         data = json.loads(result.stdout)
         assert len(data) >= 1
+
+    def test_query_sem_filepath_com_config(self, tmp_path, monkeypatch):
+        """codemap query --ext .pas funciona sem filepath se config tiver default_dirmap."""
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "a.pas").write_text("", encoding="utf-8")
+        (tmp_path / "b.py").write_text("", encoding="utf-8")
+        out = tmp_path / "dm.json"
+        env = {**os.environ, "PYTHONPATH": str(Path(__file__).parent.parent)}
+        subprocess.run(
+            [PYTHON, "-m", CLI_MODULE, "dirmap", str(tmp_path), "--output", str(out)],
+            capture_output=True, env=env,
+        )
+        (tmp_path / ".codemap.yml").write_text(
+            f"dirmap:\n  default_dirmap: {out}\n", encoding="utf-8"
+        )
+        result = subprocess.run(
+            [PYTHON, "-m", CLI_MODULE, "query", "--ext", ".pas", "--count"],
+            capture_output=True, text=True, cwd=str(tmp_path), env=env,
+        )
+        assert result.returncode == 0
+        assert "1" in result.stdout
+
+    def test_query_sem_filepath_sem_config_erro(self, tmp_path, monkeypatch):
+        """codemap query sem filepath e sem config deve dar erro claro."""
+        monkeypatch.chdir(tmp_path)
+        result = subprocess.run(
+            [PYTHON, "-m", CLI_MODULE, "query", "--ext", ".pas"],
+            capture_output=True, text=True, cwd=str(tmp_path),
+        )
+        assert result.returncode != 0
 
 
 class TestUsesCLI:

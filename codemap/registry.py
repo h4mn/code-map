@@ -92,6 +92,11 @@ class CommandRegistry:
                     )
                     continue
 
+                # filepath com default None → posicional opcional (nargs='?')
+                if pname == "filepath" and has_default and default is None:
+                    sub.add_argument(pname, nargs="?", default=None, help="caminho do dirmap (ou configure default_dirmap)")
+                    continue
+
                 # Parâmetros posicionais obrigatórios (sem default)
                 if not has_default:
                     sub.add_argument(pname, help=f"{pname}")

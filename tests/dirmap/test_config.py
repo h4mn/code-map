@@ -150,3 +150,43 @@ class TestMetricsConfig:
         assert config.metrics_enabled is True
         assert config.metrics_languages == []
         assert config.duplicates_min_group_size == 2
+
+
+class TestDefaultDirmap:
+    def test_default_dirmap_none_sem_config(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        config = DirmapConfig.load()
+        assert config.default_dirmap is None
+
+    def test_default_dirmap_via_project_config(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / ".codemap.yml").write_text(
+            "dirmap:\n"
+            "  default_dirmap: dirmap.json\n",
+            encoding="utf-8",
+        )
+        config = DirmapConfig.load()
+        assert config.default_dirmap == "dirmap.json"
+
+    def test_default_dirmap_path_completo(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / ".codemap.yml").write_text(
+            "dirmap:\n"
+            "  default_dirmap: C:\\_Fontes\\hadsteca.json\n",
+            encoding="utf-8",
+        )
+        config = DirmapConfig.load()
+        assert config.default_dirmap == "C:\\_Fontes\\hadsteca.json"
+
+    def test_default_dirmap_nao_afeta_outros_campos(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / ".codemap.yml").write_text(
+            "dirmap:\n"
+            "  default_dirmap: dm.json\n"
+            "  walker:\n"
+            "    max_depth: 5\n",
+            encoding="utf-8",
+        )
+        config = DirmapConfig.load()
+        assert config.default_dirmap == "dm.json"
+        assert config.max_depth == 5
